@@ -39,6 +39,7 @@ import ast
 from typing import List
 
 from scanner.parser.ast_parser import ParsedFile
+from scanner.rules.ast_utils import is_dynamic_string
 from scanner.rules.base_rule import Rule
 from scanner.rules.finding import Confidence, Severity, VulnerabilityFinding
 
@@ -46,40 +47,6 @@ from scanner.rules.finding import Confidence, Severity, VulnerabilityFinding
 # Python DB libraries (sqlite3, psycopg2, MySQLdb/PyMySQL, Django ORM's
 # .raw(), SQLAlchemy's .execute()/.query()).
 _SQL_SINK_METHODS = {"execute", "executemany", "executescript", "raw", "query"}
-
-
-def _looks_stringy(node: ast.expr) -> bool:
-    """True if `node` is a string literal or itself a dynamically-built
-    string expression -- used to decide whether a BinOp's operand is
-    plausibly part of building a SQL string (vs. e.g. plain arithmetic
-    like `x + 1`, which visit_BinOp should NOT flag)."""
-    if isinstance(node, ast.Constant) and isinstance(node.value, str):
-        return True
-    return isinstance(node, (ast.BinOp, ast.JoinedStr, ast.Call))
-
-
-def _is_dynamic_string(node: ast.expr) -> bool:
-    """True if `node` builds a string at runtime via f-string,
-    concatenation, %-formatting, or .format() -- the four common ways
-    a SQL query gets assembled unsafely instead of parameterized."""
-    if isinstance(node, ast.JoinedStr):
-        # An f-string, e.g. f"SELECT * FROM users WHERE id = {user_id}"
-        return True
-
-    if isinstance(node, ast.BinOp):
-        if isinstance(node.op, ast.Mod):
-            # Old-style %-formatting: "SELECT ... WHERE id = %s" % user_id
-            return True
-        if isinstance(node.op, ast.Add):
-            # String concatenation: "SELECT ... " + user_id
-            return _looks_stringy(node.left) or _looks_stringy(node.right)
-
-    if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-        if node.func.attr == "format":
-            # "SELECT ... WHERE id = {}".format(user_id)
-            return True
-
-    return False
 
 
 class SqlInjectionRule(Rule):
@@ -104,7 +71,7 @@ class SqlInjectionRule(Rule):
                 continue
 
             query_arg = node.args[0]
-            if _is_dynamic_string(query_arg):
+            if is_dynamic_string(query_arg):
                 confidence = (
                     Confidence.LOW if self._is_test_file(parsed_file) else Confidence.MEDIUM
                 )

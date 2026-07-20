@@ -1,6 +1,7 @@
 from .finding import VulnerabilityFinding, Severity, Confidence, SEVERITY_ORDER
 from .base_rule import Rule
 from .sql_injection import SqlInjectionRule
+from .command_injection import CommandInjectionRule
 
 __all__ = [
     "VulnerabilityFinding",
@@ -9,4 +10,5 @@ __all__ = [
     "SEVERITY_ORDER",
     "Rule",
     "SqlInjectionRule",
+    "CommandInjectionRule",
 ]
