@@ -5,6 +5,7 @@ from .command_injection import CommandInjectionRule
 from .hardcoded_secrets import HardcodedSecretsRule
 from .insecure_deserialization import InsecureDeserializationRule
 from .weak_crypto import WeakCryptoRule
+from .missing_input_validation import MissingInputValidationRule
 
 __all__ = [
     "VulnerabilityFinding",
@@ -17,4 +18,5 @@ __all__ = [
     "HardcodedSecretsRule",
     "InsecureDeserializationRule",
     "WeakCryptoRule",
+    "MissingInputValidationRule",
 ]
