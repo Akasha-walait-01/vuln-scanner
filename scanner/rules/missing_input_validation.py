@@ -45,35 +45,13 @@ import ast
 from typing import List, Union
 
 from scanner.parser.ast_parser import ParsedFile
+from scanner.rules.ast_utils import is_user_input_call
 from scanner.rules.base_rule import Rule
 from scanner.rules.finding import Confidence, Severity, VulnerabilityFinding
 
 FunctionNode = Union[ast.FunctionDef, ast.AsyncFunctionDef]
 
-# Attribute names on a `request`-like object that hand back raw,
-# attacker-controllable input in common Python web frameworks
-# (Flask/Django/FastAPI-style request objects).
-_REQUEST_INPUT_ATTRS = {"args", "form", "values", "GET", "POST", "json", "query_params", "COOKIES", "headers"}
-
 _SENSITIVE_SINK_ATTR_NAMES = {"execute", "executemany", "system", "popen"}
-
-
-def _is_user_input_call(node: ast.expr) -> bool:
-    """True for input()/request.<attr>.get(...) style calls that hand
-    back raw, unvalidated user-controlled data."""
-    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "input":
-        return True
-
-    if (
-        isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Attribute)
-        and node.func.attr == "get"
-        and isinstance(node.func.value, ast.Attribute)
-        and node.func.value.attr in _REQUEST_INPUT_ATTRS
-    ):
-        return True
-
-    return False
 
 
 def _is_sensitive_sink(node: ast.expr) -> bool:
@@ -132,7 +110,7 @@ class MissingInputValidationRule(Rule):
             sink_line = None
 
             for sub in ast.walk(node):
-                if _is_user_input_call(sub):
+                if is_user_input_call(sub):
                     has_input_source = True
                 if _is_sensitive_sink(sub) and sink_line is None:
                     sink_line = sub.lineno

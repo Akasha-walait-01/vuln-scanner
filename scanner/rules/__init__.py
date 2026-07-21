@@ -6,6 +6,7 @@ from .hardcoded_secrets import HardcodedSecretsRule
 from .insecure_deserialization import InsecureDeserializationRule
 from .weak_crypto import WeakCryptoRule
 from .missing_input_validation import MissingInputValidationRule
+from .path_traversal import PathTraversalRule
 
 __all__ = [
     "VulnerabilityFinding",
@@ -19,4 +20,5 @@ __all__ = [
     "InsecureDeserializationRule",
     "WeakCryptoRule",
     "MissingInputValidationRule",
+    "PathTraversalRule",
 ]
