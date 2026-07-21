@@ -7,6 +7,18 @@ from .insecure_deserialization import InsecureDeserializationRule
 from .weak_crypto import WeakCryptoRule
 from .missing_input_validation import MissingInputValidationRule
 from .path_traversal import PathTraversalRule
+from .eval_exec_misuse import EvalExecMisuseRule
+
+ALL_RULES = [
+    SqlInjectionRule,
+    CommandInjectionRule,
+    HardcodedSecretsRule,
+    InsecureDeserializationRule,
+    WeakCryptoRule,
+    MissingInputValidationRule,
+    PathTraversalRule,
+    EvalExecMisuseRule,
+]
 
 __all__ = [
     "VulnerabilityFinding",
@@ -21,4 +33,6 @@ __all__ = [
     "WeakCryptoRule",
     "MissingInputValidationRule",
     "PathTraversalRule",
+    "EvalExecMisuseRule",
+    "ALL_RULES",
 ]
