@@ -4,6 +4,7 @@ from .sql_injection import SqlInjectionRule
 from .command_injection import CommandInjectionRule
 from .hardcoded_secrets import HardcodedSecretsRule
 from .insecure_deserialization import InsecureDeserializationRule
+from .weak_crypto import WeakCryptoRule
 
 __all__ = [
     "VulnerabilityFinding",
@@ -15,4 +16,5 @@ __all__ = [
     "CommandInjectionRule",
     "HardcodedSecretsRule",
     "InsecureDeserializationRule",
+    "WeakCryptoRule",
 ]
