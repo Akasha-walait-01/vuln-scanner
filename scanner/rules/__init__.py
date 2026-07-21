@@ -3,6 +3,7 @@ from .base_rule import Rule
 from .sql_injection import SqlInjectionRule
 from .command_injection import CommandInjectionRule
 from .hardcoded_secrets import HardcodedSecretsRule
+from .insecure_deserialization import InsecureDeserializationRule
 
 __all__ = [
     "VulnerabilityFinding",
@@ -13,4 +14,5 @@ __all__ = [
     "SqlInjectionRule",
     "CommandInjectionRule",
     "HardcodedSecretsRule",
+    "InsecureDeserializationRule",
 ]
