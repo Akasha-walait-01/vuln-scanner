@@ -2,40 +2,35 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Vulnerability Scan Report — {{ project_name }}</title>
+<title>vuln-scanner report -- {{ source_label }}</title>
 <style>
   :root {
-    --critical: #b91c1c;
-    --high: #d97706;
-    --medium: #ca8a04;
-    --low: #2563eb;
-    --risk-low-band: #16a34a;
-    --bg: #f8fafc;
-    --card: #ffffff;
-    --border: #e2e8f0;
-    --text: #1e293b;
-    --muted: #64748b;
+    --bg: #0d1117;
+    --panel: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --text-dim: #8b949e;
+    --critical: #f85149;
+    --high: #ff9857;
+    --medium: #e3b341;
+    --low: #58a6ff;
+    --ok: #3fb950;
   }
   * { box-sizing: border-box; }
   body {
-    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
     background: var(--bg);
     color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     margin: 0;
     padding: 32px;
     line-height: 1.5;
   }
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
-    gap: 16px;
-  }
-  h1 { margin: 0 0 4px 0; font-size: 24px; }
-  .subtitle { color: var(--muted); font-size: 14px; }
+  .container { max-width: 1000px; margin: 0 auto; }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  .subtitle { color: var(--text-dim); margin-bottom: 32px; font-size: 14px; }
+  .subtitle code { background: var(--panel); padding: 2px 6px; border-radius: 4px; }
 
+  /* --- Dashboard --- */
   .dashboard {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -43,188 +38,197 @@
     margin-bottom: 32px;
   }
   .card {
-    background: var(--card);
+    background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px 20px;
+    border-radius: 8px;
+    padding: 16px;
   }
-  .card .value { font-size: 28px; font-weight: 700; }
-  .card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 4px; }
+  .card .label { color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .card .value { font-size: 28px; font-weight: 600; }
+  .risk-card .value { font-size: 22px; }
+  .risk-critical { color: var(--critical); }
+  .risk-high { color: var(--high); }
+  .risk-medium { color: var(--medium); }
+  .risk-low { color: var(--low); }
+  .risk-none { color: var(--ok); }
 
-  .risk-score-card { grid-column: span 1; }
-  .risk-score-card .value { font-size: 36px; }
-  .risk-band {
+  .sev-badge {
     display: inline-block;
     padding: 2px 10px;
-    border-radius: 999px;
+    border-radius: 12px;
     font-size: 12px;
     font-weight: 600;
-    color: #fff;
-    margin-top: 6px;
+    text-transform: uppercase;
   }
-  .band-critical { background: var(--critical); }
-  .band-high { background: var(--high); }
-  .band-moderate { background: var(--medium); }
-  .band-low { background: var(--risk-low-band); }
+  .sev-critical { background: rgba(248,81,73,0.15); color: var(--critical); border: 1px solid var(--critical); }
+  .sev-high { background: rgba(255,152,87,0.15); color: var(--high); border: 1px solid var(--high); }
+  .sev-medium { background: rgba(227,179,65,0.15); color: var(--medium); border: 1px solid var(--medium); }
+  .sev-low { background: rgba(88,166,255,0.15); color: var(--low); border: 1px solid var(--low); }
 
-  .sev-critical .value { color: var(--critical); }
-  .sev-high .value { color: var(--high); }
-  .sev-medium .value { color: var(--medium); }
-  .sev-low .value { color: var(--low); }
+  /* --- Category breakdown --- */
+  .category-table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 32px; }
+  .category-table th, .category-table td { text-align: left; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+  .category-table th { color: var(--text-dim); font-size: 12px; text-transform: uppercase; }
+  .category-table tr:last-child td { border-bottom: none; }
 
-  .category-breakdown {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 32px;
-  }
-  .category-breakdown h2 { margin-top: 0; font-size: 16px; }
-  .cat-row { display: flex; align-items: center; gap: 12px; margin: 8px 0; font-size: 14px; }
-  .cat-row .cat-name { width: 220px; flex-shrink: 0; color: var(--text); }
-  .cat-row .bar-track { flex: 1; background: #eef2f7; border-radius: 6px; height: 10px; overflow: hidden; }
-  .cat-row .bar-fill { height: 100%; width: 0%; background: #64748b; border-radius: 6px; transition: width 0.3s ease; }
-  .cat-row .cat-count { width: 32px; text-align: right; color: var(--muted); }
-
-  .severity-section { margin-bottom: 32px; }
-  .severity-section h2 {
-    display: flex; align-items: center; gap: 10px; font-size: 18px;
-    border-bottom: 2px solid var(--border); padding-bottom: 8px;
-  }
-  .badge {
-    display: inline-block; padding: 2px 10px; border-radius: 999px;
-    font-size: 12px; font-weight: 700; color: #fff; text-transform: uppercase;
-  }
-  .badge-critical { background: var(--critical); }
-  .badge-high { background: var(--high); }
-  .badge-medium { background: var(--medium); }
-  .badge-low { background: var(--low); }
-
-  .finding {
-    background: var(--card);
+  /* --- Findings --- */
+  section.severity-group { margin-bottom: 24px; }
+  section.severity-group > h2 { font-size: 16px; margin-bottom: 12px; }
+  details.finding {
+    background: var(--panel);
     border: 1px solid var(--border);
     border-left: 4px solid var(--border);
-    border-radius: 8px;
-    padding: 16px 18px;
-    margin-bottom: 12px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    padding: 0;
   }
-  .finding.critical { border-left-color: var(--critical); }
-  .finding.high { border-left-color: var(--high); }
-  .finding.medium { border-left-color: var(--medium); }
-  .finding.low { border-left-color: var(--low); }
+  details.finding[data-severity="critical"] { border-left-color: var(--critical); }
+  details.finding[data-severity="high"] { border-left-color: var(--high); }
+  details.finding[data-severity="medium"] { border-left-color: var(--medium); }
+  details.finding[data-severity="low"] { border-left-color: var(--low); }
+  details.finding summary {
+    cursor: pointer;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+  }
+  details.finding summary .loc { color: var(--text-dim); font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 13px; }
+  details.finding summary .rule-id { color: var(--text-dim); font-size: 12px; margin-left: auto; }
+  .finding-body { padding: 0 16px 16px 16px; border-top: 1px solid var(--border); }
+  .finding-body p { margin: 12px 0 4px 0; font-size: 13px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
+  .finding-body .content { color: var(--text); font-size: 14px; margin: 0; text-transform: none; letter-spacing: normal; }
+  .snippet {
+    background: #010409;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 13px;
+    overflow-x: auto;
+    color: #e6edf3;
+  }
+  .meta-row { display: flex; gap: 16px; font-size: 12px; color: var(--text-dim); margin-top: 8px; }
 
-  .finding-top { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; }
-  .finding-title { font-weight: 700; font-size: 15px; }
-  .finding-location { font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px; color: var(--muted); }
-  .finding-desc { margin: 8px 0; font-size: 14px; }
-  .finding-snippet {
-    background: #0f172a; color: #e2e8f0;
-    font-family: "SFMono-Regular", Consolas, monospace;
-    font-size: 12.5px; padding: 10px 12px; border-radius: 6px;
-    overflow-x: auto; margin: 8px 0; white-space: pre;
-  }
-  .finding-fix {
-    background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px;
-    padding: 8px 12px; font-size: 13px; margin-top: 8px;
-  }
-  .finding-fix strong { color: #166534; }
-  .finding-meta { font-size: 11px; color: var(--muted); margin-top: 6px; }
-  .reduced-note { display: inline-block; font-size: 11px; color: var(--muted); font-style: italic; margin-left: 8px; }
+  /* --- Quality findings --- */
+  .quality-check { margin-bottom: 20px; }
+  .quality-check h3 { font-size: 14px; margin-bottom: 8px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
+  .quality-item { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 10px 16px; margin-bottom: 6px; font-size: 13px; }
+  .quality-item .loc { font-family: ui-monospace, "SF Mono", Consolas, monospace; color: var(--text-dim); margin-right: 8px; }
 
-  .empty-state { text-align: center; color: var(--muted); padding: 24px; font-size: 14px; }
-  footer { color: var(--muted); font-size: 12px; margin-top: 40px; text-align: center; }
+  .empty-state { color: var(--text-dim); font-style: italic; padding: 16px; }
+  footer { margin-top: 48px; color: var(--text-dim); font-size: 12px; text-align: center; }
 </style>
 </head>
 <body>
+<div class="container">
 
-<div class="header">
-  <div>
-    <h1>Vulnerability Scan Report</h1>
-    <div class="subtitle">{{ project_name }} &middot; scanned {{ scan_timestamp }} &middot; {{ files_scanned }} files analyzed</div>
-  </div>
-</div>
+  <h1>vuln-scanner report</h1>
+  <div class="subtitle">Scanned: <code>{{ source_label }}</code> &middot; {{ scanned_file_count }} Python file(s)</div>
 
-<div class="dashboard">
-  <div class="card risk-score-card">
-    <div class="value">{{ risk_score }}<span style="font-size:16px;color:var(--muted);">/100</span></div>
-    <div class="label">Overall Risk Score</div>
-    <span class="risk-band {{ risk_band_class }}">{{ risk_band_label }}</span>
+  <!-- Dashboard -->
+  <div class="dashboard">
+    <div class="card risk-card">
+      <div class="label">Overall Risk</div>
+      <div class="value
+        {%- if risk_label == 'Critical Risk' %} risk-critical
+        {%- elif risk_label == 'High Risk' %} risk-high
+        {%- elif risk_label == 'Medium Risk' %} risk-medium
+        {%- elif risk_label == 'Low Risk' %} risk-low
+        {%- else %} risk-none{% endif %}">{{ risk_score }}/100</div>
+      <div class="label">{{ risk_label }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Critical</div>
+      <div class="value risk-critical">{{ breakdown.critical }}</div>
+    </div>
+    <div class="card">
+      <div class="label">High</div>
+      <div class="value risk-high">{{ breakdown.high }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Medium</div>
+      <div class="value risk-medium">{{ breakdown.medium }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Low</div>
+      <div class="value risk-low">{{ breakdown.low }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Code Quality Notes</div>
+      <div class="value">{{ total_quality_findings }}</div>
+    </div>
   </div>
-  <div class="card sev-critical">
-    <div class="value">{{ severity_counts.critical }}</div>
-    <div class="label">Critical</div>
-  </div>
-  <div class="card sev-high">
-    <div class="value">{{ severity_counts.high }}</div>
-    <div class="label">High</div>
-  </div>
-  <div class="card sev-medium">
-    <div class="value">{{ severity_counts.medium }}</div>
-    <div class="label">Medium</div>
-  </div>
-  <div class="card sev-low">
-    <div class="value">{{ severity_counts.low }}</div>
-    <div class="label">Low</div>
-  </div>
-  <div class="card">
-    <div class="value">{{ total_findings }}</div>
-    <div class="label">Total Findings</div>
-  </div>
-</div>
 
-{% if category_counts %}
-<div class="category-breakdown">
-  <h2>Findings by Category</h2>
-  {% for cat, count in category_counts %}
-  <div class="cat-row">
-    <div class="cat-name">{{ cat }}</div>
-    <div class="bar-track"><div class="bar-fill" data-width="{{ (count / max_category_count * 100) | round(1) }}"></div></div>
-    <div class="cat-count">{{ count }}</div>
-  </div>
+  <!-- Category breakdown -->
+  {% if category_counts %}
+  <table class="category-table">
+    <thead><tr><th>Vulnerability Category</th><th>Findings</th></tr></thead>
+    <tbody>
+      {% for rule_id, count in category_counts %}
+      <tr><td>{{ rule_id }}</td><td>{{ count }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <!-- Security findings, grouped by severity -->
+  <h2>Security Findings</h2>
+  {% if total_security_findings == 0 %}
+    <div class="empty-state">No security findings.</div>
+  {% endif %}
+
+  {% for sev in severity_order %}
+    {% set items = severity_groups[sev] %}
+    {% if items %}
+    <section class="severity-group">
+      <h2><span class="sev-badge sev-{{ sev }}">{{ sev }}</span> ({{ items|length }})</h2>
+      {% for f in items %}
+      <details class="finding" data-severity="{{ sev }}">
+        <summary>
+          <span class="loc">{{ f.file_path }}:{{ f.line }}</span>
+          <span>{{ f.message[:90] }}{% if f.message|length > 90 %}...{% endif %}</span>
+          <span class="rule-id">{{ f.rule_id }} &middot; {{ f.cwe_id }}</span>
+        </summary>
+        <div class="finding-body">
+          <p>Explanation</p>
+          <p class="content">{{ f.message }}</p>
+
+          <p>Code</p>
+          <div class="snippet">{{ f.code_snippet }}</div>
+
+          <p>Suggested Fix</p>
+          <p class="content">{{ f.fix_suggestion }}</p>
+
+          <div class="meta-row">
+            <span>Confidence: {{ f.confidence.value }}</span>
+            {% if f.function_name %}<span>Function: {{ f.function_name }}()</span>{% endif %}
+          </div>
+        </div>
+      </details>
+      {% endfor %}
+    </section>
+    {% endif %}
   {% endfor %}
-</div>
-{% endif %}
 
-{% for severity in ["critical", "high", "medium", "low"] %}
-  {% set group = findings_by_severity.get(severity, []) %}
-  {% if group %}
-  <div class="severity-section">
-    <h2><span class="badge badge-{{ severity }}">{{ severity }}</span> {{ group | length }} finding{{ 's' if group | length != 1 }}</h2>
-    {% for f in group %}
-    <div class="finding {{ severity }}">
-      <div class="finding-top">
-        <div class="finding-title">{{ f.category }} — {{ f.rule_id }}</div>
-        <div class="finding-location">{{ f.file_path }}:{{ f.line_number }}</div>
-      </div>
-      <div class="finding-desc">{{ f.message }}</div>
-      {% if f.code_snippet %}
-      <div class="finding-snippet">{{ f.code_snippet }}</div>
-      {% endif %}
-      {% if f.suggested_fix %}
-      <div class="finding-fix"><strong>Suggested fix:</strong> {{ f.suggested_fix }}</div>
-      {% endif %}
-      <div class="finding-meta">
-        {{ f.severity_reason }}
-        {% if f.reduced_severity %}<span class="reduced-note">— severity reduced: {{ f.reduced_reason }}</span>{% endif %}
-      </div>
+  <!-- Code quality findings -->
+  <h2>Code Quality Notes</h2>
+  {% if not quality_groups %}
+    <div class="empty-state">No code quality issues found.</div>
+  {% endif %}
+  {% for check, items in quality_groups.items() %}
+  <div class="quality-check">
+    <h3>{{ check }} ({{ items|length }})</h3>
+    {% for f in items %}
+    <div class="quality-item">
+      <span class="loc">{{ f.file_path }}:{{ f.line }}</span>{{ f.message }}
     </div>
     {% endfor %}
   </div>
-  {% endif %}
-{% endfor %}
+  {% endfor %}
 
-{% if total_findings == 0 %}
-<div class="empty-state">No findings — clean scan.</div>
-{% endif %}
-
-<footer>Generated by vuln-scanner &middot; {{ scan_timestamp }}</footer>
-
-<script>
-  document.querySelectorAll('.bar-fill').forEach(function (el) {
-    var w = el.getAttribute('data-width');
-    el.style.width = w + '%';
-  });
-</script>
-
+  <footer>Generated by vuln-scanner &middot; AI-Powered Code Review &amp; Vulnerability Scanner</footer>
+</div>
 </body>
 </html>

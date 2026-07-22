@@ -1,51 +1,49 @@
 """
 pdf_reporter.py
+-----------------
+Optional (per the brief: "Optional agar PDF bhi chahiye") -- converts
+the same rendered HTML report into a PDF, using weasyprint.
 
-Optional PDF output. Reuses html_reporter's Jinja2 rendering and converts the
-resulting HTML to PDF with WeasyPrint (pure-Python, no external binary
-dependency like wkhtmltopdf, so it stays consistent with the "runs entirely
-offline/locally" non-functional requirement).
+Design decision: this does NOT reimplement the report layout in a
+separate PDF-drawing library (e.g. reportlab). It reuses the exact same
+Jinja2-rendered HTML that html_reporter.py produces and converts THAT
+to PDF -- one source of truth for the report's content/structure, so
+the two output formats can never drift out of sync with each other.
 
-If weasyprint isn't installed, this module raises a clear ImportError with
-install instructions rather than failing silently or crashing on import for
-callers that only want the HTML reporter.
+weasyprint is an optional dependency (not in the base requirements.txt)
+since the brief marks PDF export as optional, and weasyprint has extra
+system-level dependencies (Pango/Cairo) beyond a plain `pip install` on
+some platforms. If it isn't installed, this module raises a clear,
+actionable error instead of a confusing import traceback.
 """
 
-import os
+from __future__ import annotations
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from pathlib import Path
 
-from .html_reporter import build_report_context, TEMPLATE_DIR, TEMPLATE_NAME
+from scanner.reporter.html_reporter import generate_html_report
 
 
-def generate_pdf_report(findings, project_name, files_scanned, output_path,
-                         scan_timestamp=None):
-    """
-    Render findings straight to a PDF file at output_path.
+def generate_pdf_report(*args, output_path: str, **kwargs) -> Path:
+    """Same arguments as generate_html_report(), except `output_path`
+    should end in .pdf. Internally renders the HTML report to a temp
+    location, then converts it to PDF with weasyprint.
 
-    Same parameters as html_reporter.generate_report(). Returns output_path.
+    Raises:
+        ImportError: if weasyprint isn't installed, with instructions.
     """
     try:
         from weasyprint import HTML
     except ImportError as exc:
         raise ImportError(
-            "PDF export requires weasyprint. Install it with:\n"
-            "    pip install weasyprint\n"
-            "(WeasyPrint also needs some system libraries - see "
-            "https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation "
-            "if the pip install alone doesn't work on your platform)."
+            "PDF export requires the optional 'weasyprint' package. "
+            "Install it with: pip install weasyprint"
         ) from exc
 
-    env = Environment(
-        loader=FileSystemLoader(TEMPLATE_DIR),
-        autoescape=select_autoescape(["html"]),
-    )
-    template = env.get_template(TEMPLATE_NAME)
+    pdf_path = Path(output_path)
+    html_path = pdf_path.with_suffix(".html")
 
-    context = build_report_context(findings, project_name, files_scanned, scan_timestamp)
-    html_string = template.render(**context)
+    generate_html_report(*args, output_path=str(html_path), **kwargs)
 
-    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-    HTML(string=html_string).write_pdf(output_path)
-
-    return output_path
+    HTML(filename=str(html_path)).write_pdf(str(pdf_path))
+    return pdf_path
